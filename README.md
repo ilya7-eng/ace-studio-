@@ -3,7 +3,7 @@
 Eli Ace's in-house AI media studio: video (LTX-2.5 with synced audio, text or photo-to-video, 3–12 s),
 images, music (ACE-Step), and storyboards. No login — one shared studio.
 
-Live: https://ace-studio-nexen-construction.viktor.space
+Live: https://ace-studio-aiaceteam.viktor.space
 
 ## Stack
 - React 19 + Vite + Tailwind v4 + shadcn/ui (`src/`)
