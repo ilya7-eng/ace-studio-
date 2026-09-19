@@ -1,4 +1,12 @@
-import { internalMutation, internalQuery, mutation } from "./_generated/server";
+import { v } from "convex/values";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
+
+declare const process: { env: Record<string, string | undefined> };
 import { STUDIO_EMAIL, sharedStudioUserId } from "./functions";
 
 /** Find-or-create the shared studio owner row. Called once on app load. */
@@ -44,5 +52,40 @@ export const adoptAll = internalMutation({
       }
     }
     return { moved, shared };
+  },
+});
+
+/** Which engine credentials this deployment has (booleans only, no values). */
+export const engineCheck = query({
+  args: {},
+  handler: async () => ({
+    hfToken: Boolean(process.env.HF_TOKEN),
+    toolGateway: Boolean(
+      process.env.VIKTOR_SPACES_API_URL && process.env.VIKTOR_SPACES_PROJECT_SECRET,
+    ),
+  }),
+});
+
+export const getSecret = internalQuery({
+  args: { name: v.string() },
+  handler: async (ctx, { name }) => {
+    const row = await ctx.db
+      .query("secrets")
+      .withIndex("by_name", q => q.eq("name", name))
+      .unique();
+    return row?.value ?? null;
+  },
+});
+
+export const setSecret = internalMutation({
+  args: { name: v.string(), value: v.string() },
+  handler: async (ctx, { name, value }) => {
+    const row = await ctx.db
+      .query("secrets")
+      .withIndex("by_name", q => q.eq("name", name))
+      .unique();
+    if (row) await ctx.db.patch(row._id, { value });
+    else await ctx.db.insert("secrets", { name, value });
+    return "ok";
   },
 });

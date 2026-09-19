@@ -14,6 +14,18 @@ declare const process: { env: Record<string, string | undefined> };
 const LTX_SPACE = "https://legacy-music-studios-ltx-studio.hf.space";
 const ACE_SPACE = "https://legacy-music-studios-ace-studio.hf.space";
 
+/** Production cannot take env vars from the sandbox: fall back to the secrets table. */
+async function ensureHfToken(ctx: {
+  runQuery: (
+    ref: typeof internal.studio.getSecret,
+    args: { name: string },
+  ) => Promise<string | null>;
+}) {
+  if (process.env.HF_TOKEN) return;
+  const stored = await ctx.runQuery(internal.studio.getSecret, { name: "HF_TOKEN" });
+  if (stored) process.env.HF_TOKEN = stored;
+}
+
 function hfHeaders(): Record<string, string> {
   const token = process.env.HF_TOKEN;
   if (!token) throw new Error("HF_TOKEN is not configured on this deployment");
@@ -98,6 +110,7 @@ export const renderVideo = internalAction({
     await ctx.runMutation(internal.jobs.markRunning, { id: jobId });
     const t0 = Date.now();
     try {
+      await ensureHfToken(ctx);
       let imageArg: unknown = null;
       if (job.inputUrl) {
         const bytes = await fetchBytes(job.inputUrl);
@@ -188,6 +201,7 @@ export const renderMusic = internalAction({
     await ctx.runMutation(internal.jobs.markRunning, { id: jobId });
     const t0 = Date.now();
     try {
+      await ensureHfToken(ctx);
       const p = job.params as { seconds: number; lyrics: string };
       const [audio] = await gradioCall<[string]>(ACE_SPACE, "generate", [
         job.fullPrompt ?? job.prompt,
@@ -461,6 +475,7 @@ export const renderScene = internalAction({
     if (!sb) return;
     const scene = sb.scenes[sceneIndex];
     if (!scene) return;
+    await ensureHfToken(ctx);
     const stillStyle = sb.settings.realism
       ? "Photorealistic cinematic film still, shot on ARRI Alexa 35, natural skin texture, realistic lighting, no text, no watermark."
       : "Cinematic film still, no text, no watermark.";

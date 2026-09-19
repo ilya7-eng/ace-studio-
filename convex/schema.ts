@@ -17,6 +17,12 @@ export const jobStatus = v.union(
 
 const schema = defineSchema({
   ...authTables,
+  // Runtime secrets for deployments where env vars cannot be set from the
+  // sandbox (production). Written only through the admin HTTP route.
+  secrets: defineTable({ name: v.string(), value: v.string() }).index(
+    "by_name",
+    ["name"],
+  ),
   jobs: defineTable({
     userId: v.id("users"),
     kind: jobKind,
