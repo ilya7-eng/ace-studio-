@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { authenticatedMutation, authenticatedQuery } from "./functions";
 import { jobKind } from "./schema";
@@ -70,6 +71,34 @@ export const get = authenticatedQuery({
 });
 
 /** GPU seconds used in the last 24h (shared HF allowance, all users). */
+
+/** Server-side gate for the daily GPU allowance (the sidebar bar is only a mirror of this). */
+async function assertBudget(
+  ctx: MutationCtx,
+  kind: "video" | "image" | "music",
+) {
+  const since = Date.now() - 24 * 3600 * 1000;
+  const recent = await ctx.db
+    .query("jobs")
+    .withIndex("by_created", q => q.gt("createdAt", since))
+    .collect();
+  const used = recent.reduce((s, j) => s + (j.gpuSeconds ?? 0), 0);
+  const inFlight = recent.filter(
+    j => j.status === "running" || j.status === "queued",
+  ).length;
+  if (kind !== "image" && used >= DAILY_GPU_SECONDS) {
+    throw new Error(
+      "Daily GPU allowance is used up. It resets over the next 24 hours.",
+    );
+  }
+  if (inFlight >= MAX_IN_FLIGHT) {
+    throw new Error(
+      `Too many renders in flight (${inFlight}). Wait for one to finish.`,
+    );
+  }
+}
+export const MAX_IN_FLIGHT = 6;
+
 export const budget = authenticatedQuery({
   args: {},
   handler: async ctx => {
@@ -127,6 +156,7 @@ export const createVideo = authenticatedMutation({
     inputFileId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
+    await assertBudget(ctx, "video");
     const fmt = VIDEO_FORMATS[args.format];
     if (!fmt) throw new Error("Unknown format");
     const seconds = Math.max(2, Math.min(12, Math.round(args.seconds)));
@@ -176,6 +206,7 @@ export const createImage = authenticatedMutation({
     quality: v.union(v.literal("fast"), v.literal("best")),
   },
   handler: async (ctx, args) => {
+    await assertBudget(ctx, "image");
     const id = await ctx.db.insert("jobs", {
       userId: ctx.userId,
       kind: "image",
@@ -201,6 +232,7 @@ export const createMusic = authenticatedMutation({
     seed: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await assertBudget(ctx, "music");
     const seconds = Math.max(10, Math.min(240, Math.round(args.seconds)));
     const seed =
       args.seed !== undefined && args.seed >= 0

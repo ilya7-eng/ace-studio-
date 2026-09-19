@@ -10,8 +10,8 @@ import {
 } from "convex-helpers/server/customFunctions";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { action, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { action, mutation, query } from "./_generated/server";
 
 /**
  * Ace Studio runs with NO login (Eli, 2026-09-19): every visitor works in

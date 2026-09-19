@@ -7,6 +7,7 @@ import {
 } from "./_generated/server";
 
 declare const process: { env: Record<string, string | undefined> };
+
 import { STUDIO_EMAIL, sharedStudioUserId } from "./functions";
 
 /** Find-or-create the shared studio owner row. Called once on app load. */
@@ -61,7 +62,8 @@ export const engineCheck = query({
   handler: async () => ({
     hfToken: Boolean(process.env.HF_TOKEN),
     toolGateway: Boolean(
-      process.env.VIKTOR_SPACES_API_URL && process.env.VIKTOR_SPACES_PROJECT_SECRET,
+      process.env.VIKTOR_SPACES_API_URL &&
+        process.env.VIKTOR_SPACES_PROJECT_SECRET,
     ),
   }),
 });

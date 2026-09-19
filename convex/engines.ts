@@ -4,10 +4,10 @@
  * and the Viktor tool gateway, then store results in Convex file storage.
  */
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { REALISM_PREFIX } from "./jobs";
+import type { Id } from "./_generated/dataModel";
 import { internalAction } from "./_generated/server";
+import { REALISM_PREFIX } from "./jobs";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -22,7 +22,9 @@ async function ensureHfToken(ctx: {
   ) => Promise<string | null>;
 }) {
   if (process.env.HF_TOKEN) return;
-  const stored = await ctx.runQuery(internal.studio.getSecret, { name: "HF_TOKEN" });
+  const stored = await ctx.runQuery(internal.studio.getSecret, {
+    name: "HF_TOKEN",
+  });
   if (stored) process.env.HF_TOKEN = stored;
 }
 
@@ -273,7 +275,10 @@ async function coachVideoPrompt(
   userPrompt: string,
   seconds: number,
   hasStartFrame: boolean,
-  examples: { liked: string[]; disliked: string[] } = { liked: [], disliked: [] },
+  examples: { liked: string[]; disliked: string[] } = {
+    liked: [],
+    disliked: [],
+  },
 ): Promise<string | null> {
   const taste = [
     examples.liked.length
@@ -369,13 +374,17 @@ export const renderImage = internalAction({
   },
 });
 
-
 /* ======================= Storyboard ======================= */
 
 type PlanOut = {
   title: string;
   characters: { name: string; description: string }[];
-  scenes: { title: string; frame: string; motion: string; characters: string[] }[];
+  scenes: {
+    title: string;
+    frame: string;
+    motion: string;
+    characters: string[];
+  }[];
 };
 
 export const planStoryboard = internalAction({
@@ -402,44 +411,43 @@ Scenes should cut together as a sequence (establishing -> action -> reaction/pay
 
 IDEA: ${sb.idea}`;
     try {
-      const r = await callTool<{ result?: PlanOut; output?: PlanOut } & Partial<PlanOut>>(
-        "ai_structured_output",
-        {
-          prompt,
-          output_schema: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              characters: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    description: { type: "string" },
-                  },
-                  required: ["name", "description"],
+      const r = await callTool<
+        { result?: PlanOut; output?: PlanOut } & Partial<PlanOut>
+      >("ai_structured_output", {
+        prompt,
+        output_schema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            characters: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  description: { type: "string" },
                 },
-              },
-              scenes: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string" },
-                    frame: { type: "string" },
-                    motion: { type: "string" },
-                    characters: { type: "array", items: { type: "string" } },
-                  },
-                  required: ["title", "frame", "motion", "characters"],
-                },
+                required: ["name", "description"],
               },
             },
-            required: ["title", "characters", "scenes"],
+            scenes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  frame: { type: "string" },
+                  motion: { type: "string" },
+                  characters: { type: "array", items: { type: "string" } },
+                },
+                required: ["title", "frame", "motion", "characters"],
+              },
+            },
           },
-          intelligence_level: "smart",
+          required: ["title", "characters", "scenes"],
         },
-      );
+        intelligence_level: "smart",
+      });
       const out = (r.result ?? r.output ?? r) as PlanOut;
       if (!out.scenes?.length) throw new Error("Planner returned no scenes");
       await ctx.runMutation(internal.storyboards.setPlan, {
@@ -510,21 +518,29 @@ export const renderScene = internalAction({
           ?.replace(/[.,;)]+$/, "");
       if (!imageUrl) throw new Error("No image returned");
       const bytes = await fetchBytes(imageUrl);
-      fileId = await ctx.storage.store(new Blob([bytes], { type: "image/png" }));
+      fileId = await ctx.storage.store(
+        new Blob([bytes], { type: "image/png" }),
+      );
       await ctx.runMutation(internal.jobs.markDone, {
         id: imageJobId,
         fileId,
         mime: "image/png",
-        info: sb.settings.quality === "best" ? "GPT Image 2" : "Gemini Flash Image",
+        info:
+          sb.settings.quality === "best" ? "GPT Image 2" : "Gemini Flash Image",
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      await ctx.runMutation(internal.jobs.markError, { id: imageJobId, error: msg });
+      await ctx.runMutation(internal.jobs.markError, {
+        id: imageJobId,
+        error: msg,
+      });
       await ctx.runMutation(internal.jobs.markError, {
         id: videoJobId,
         error: `Reference still failed: ${msg}`,
       });
-      await ctx.runMutation(internal.storyboards.refreshStatus, { id: storyboardId });
+      await ctx.runMutation(internal.storyboards.refreshStatus, {
+        id: storyboardId,
+      });
       return;
     }
     // --- clip from that frame
