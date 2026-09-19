@@ -4,6 +4,7 @@ Eli Ace's in-house AI media studio: video (LTX-2.5 with synced audio, text or ph
 images, music (ACE-Step), and storyboards. No login — one shared studio.
 
 Live: https://ace-studio-aiaceteam.viktor.space
+GitHub Pages (static build of this repo, same backend): https://ilya7-eng.github.io/ace-studio-/
 
 ## Stack
 - React 19 + Vite + Tailwind v4 + shadcn/ui (`src/`)
@@ -20,6 +21,7 @@ Backend env vars: `HF_TOKEN` (private HF Spaces), `VIKTOR_SPACES_API_URL` / `_PR
 `_PROJECT_SECRET` (image + prompt-coach tool gateway).
 
 ## Static build (GitHub Pages)
+Built with `--base=/ace-studio-/`, pushed to the `gh-pages` branch (`404.html` = SPA fallback). Pushing a `gh-pages` branch auto-enabled Pages.
 ```bash
 VITE_CONVEX_URL=https://reliable-scorpion-586.convex.cloud VITE_VIKTOR_SPACES_ACCESS_MODE=public \
   bun run build
