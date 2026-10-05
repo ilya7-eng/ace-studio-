@@ -8,18 +8,21 @@ import {
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
-import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { action, mutation, query } from "./_generated/server";
 
 /**
- * Ace Studio runs with NO login (Eli, 2026-09-19): every visitor works in
- * one shared studio owned by a single synthetic "studio" user row. If a real
- * Convex Auth session happens to exist we still honour it, otherwise we fall
- * back to the shared owner. `studio.ensure` creates the row on first load.
+ * Ace Studio has no personal accounts (Eli, 2026-09-19): everyone works in one
+ * shared studio owned by a single synthetic "studio" user row. Since the
+ * Cloudflare audit (2026-10-04, C1) a caller must hold a real Convex Auth
+ * session: either the shared-passphrase sign-in (studioPassphraseAuth.ts,
+ * which signs in AS the shared owner) or, in authenticated mode, their own
+ * Viktor login. Anonymous callers are rejected; there is no fallback anymore.
  */
 export const STUDIO_EMAIL = "studio@ace-studio.local";
+// Same message as the Viktor Spaces template contract (scripts/convex-auth-contract.test.ts).
+export const SIGN_IN_REQUIRED = "Not authenticated";
 
 export async function sharedStudioUserId(ctx: QueryCtx | MutationCtx) {
   const shared = await ctx.db
@@ -29,14 +32,12 @@ export async function sharedStudioUserId(ctx: QueryCtx | MutationCtx) {
   return shared?._id ?? null;
 }
 
-async function studioContext(ctx: QueryCtx | MutationCtx) {
+export async function studioContext(
+  ctx: Pick<QueryCtx, "auth">,
+): Promise<{ userId: Id<"users"> }> {
   const userId = await getAuthUserId(ctx);
-  if (userId) return { userId };
-  const shared = await sharedStudioUserId(ctx);
-  if (!shared) {
-    throw new Error("Studio not initialized yet, reload in a second");
-  }
-  return { userId: shared };
+  if (!userId) throw new Error(SIGN_IN_REQUIRED);
+  return { userId };
 }
 
 /** Public Convex functions scoped to the (shared) studio owner. */
@@ -49,14 +50,5 @@ export const authenticatedMutation = customMutation(
 
 export const authenticatedAction = customAction(
   action,
-  customCtx(async (ctx): Promise<{ userId: Id<"users"> }> => {
-    const userId = await getAuthUserId(ctx);
-    if (userId) return { userId };
-    const shared: Id<"users"> | null = await ctx.runQuery(
-      internal.studio.sharedUserIdInternal,
-      {},
-    );
-    if (!shared) throw new Error("Studio not initialized yet");
-    return { userId: shared };
-  }),
+  customCtx(studioContext),
 );

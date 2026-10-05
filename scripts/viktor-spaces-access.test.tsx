@@ -644,8 +644,14 @@ describe("Viktor Spaces auth template contract", () => {
       "Invalid VIKTOR_SPACES_AUTH_PROVIDERS",
     );
 
+    // Ace Studio: public (no-account) mode registers only the shared-studio
+    // passphrase gate (Cloudflare audit 2026-10-04, C1), never open sign-up.
     process.env.VIKTOR_SPACES_ACCESS_MODE = "public";
-    expect(configuredAuthProviders()).toEqual([]);
+    expect(
+      configuredAuthProviders().map(
+        provider => (provider as { id?: string }).id,
+      ),
+    ).toEqual(["studio_passphrase"]);
   });
 
   test("Viktor-only provider registration fails closed without OAuth env", async () => {

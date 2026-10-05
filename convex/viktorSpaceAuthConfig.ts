@@ -2,6 +2,7 @@ import { Password } from "@convex-dev/auth/providers/Password";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
 import { createViktorAuthJsProvider } from "../src/lib/viktor-spaces-access/authjs";
 import { SpaceSessionCredentials } from "./spaceSessionAuth";
+import { StudioPassphraseCredentials } from "./studioPassphraseAuth";
 import {
   ViktorSpacesEmail,
   ViktorSpacesPasswordReset,
@@ -95,5 +96,9 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
 }
 
 export function configuredAuthProviders(): AuthProviderConfig[] {
-  return configuredProductAuthEnabled() ? configuredSpaceAuthProviders() : [];
+  // Public (no-account) mode still needs a server-checked gate: the shared
+  // studio passphrase (Cloudflare audit 2026-10-04, C1).
+  return configuredProductAuthEnabled()
+    ? configuredSpaceAuthProviders()
+    : [StudioPassphraseCredentials];
 }
