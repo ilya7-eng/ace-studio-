@@ -1,7 +1,7 @@
 # Ace Studio
 
 Eli Ace's in-house AI media studio: video (LTX-2.5 with synced audio, text or photo-to-video, 3–12 s),
-images, music (ACE-Step), and storyboards. No login — one shared studio.
+images, music (ACE-Step), and storyboards. No personal accounts: one shared studio behind a team passphrase.
 
 Live: https://ace-studio-aiaceteam.viktor.space
 GitHub Pages (static build of this repo, same backend): https://ilya7-eng.github.io/ace-studio-/
@@ -10,6 +10,17 @@ GitHub Pages (static build of this repo, same backend): https://ilya7-eng.github
 - React 19 + Vite + Tailwind v4 + shadcn/ui (`src/`)
 - Convex backend (`convex/`) — jobs queue, file storage, private Hugging Face Space engines
 - Bun for scripts
+
+## Studio passphrase (required)
+Public mode is gated by one shared passphrase (Cloudflare audit 2026-10-04, C1). Without it,
+anonymous callers could list, rate and delete everything and spend the GPU budget. Set it
+before deploying this branch, or nobody can get in (it fails closed if unset or shorter than 16 chars):
+```bash
+bunx convex env set STUDIO_PASSPHRASE '<long passphrase>'        # or, where env vars can't be set:
+curl -X POST "$CONVEX_SITE_URL/admin/secret" -H "Authorization: Bearer $VIKTOR_SPACES_PROJECT_SECRET" \
+  -d '{"name":"STUDIO_PASSPHRASE","value":"<long passphrase>"}'
+```
+Convex Auth also needs `JWT_PRIVATE_KEY` + `JWKS` on the deployment (the Viktor Space template sets them).
 
 ## Run locally
 ```bash

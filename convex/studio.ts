@@ -1,17 +1,15 @@
 import { v } from "convex/values";
-import {
-  internalMutation,
-  internalQuery,
-  mutation,
-  query,
-} from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 declare const process: { env: Record<string, string | undefined> };
 
 import { STUDIO_EMAIL, sharedStudioUserId } from "./functions";
 
-/** Find-or-create the shared studio owner row. Called once on app load. */
-export const ensure = mutation({
+/**
+ * Find-or-create the shared studio owner row. Internal only: it used to be a
+ * public mutation called on app load; now the passphrase sign-in calls it.
+ */
+export const ensureInternal = internalMutation({
   args: {},
   handler: async ctx => {
     const existing = await sharedStudioUserId(ctx);
